@@ -33,10 +33,18 @@ let _verifyToken = function(options = {}){
       }
 
       const token = hook.params.token;
+      const verificationOptions = {
+        algorithms: options.algorithm,
+        issuer: options.issuer
+      };
 
-      jwt.verify(token, secret, options, function (error, payload) {
+      jwt.verify(token, secret, verificationOptions, function (error, payload) {
+
+        debug('Called from within `jwt.verify`');
+
         if (error) {
           // Return a 401 if the token has expired.
+          debug('Error from within `jwt.verify`', error);
           return reject(new errors.NotAuthenticated(error));
         }
 
@@ -82,11 +90,22 @@ export class Service {
 
     const options = this.options;
     const data = params;
+    const verificationOptions = {
+      algorithm: options.algorithm,
+      expiresIn: options.expiresIn,
+      issuer: options.issuer
+    };
+
     // Our before hook determined that we had a valid token or that this
     // was internally called so let's generate a new token with the user
     // id and return both the ID and the token.
-    return new Promise(function(resolve){
-      jwt.sign(data, options.secret, options, token => {
+    return new Promise(function(resolve, reject){
+      jwt.sign(data, options.secret, verificationOptions, (error, token) => {
+        if (error) {
+          debug('Error from within `jwt.sign`', error);
+          return reject(error);
+        }
+
         return resolve( Object.assign(data, { token }) );
       });
     });
@@ -96,6 +115,8 @@ export class Service {
   create(user) {
     const options = this.options;
 
+    debug('Called from inside `create`');
+
     const data = {
       [options.idField]: user[options.idField]
     };
@@ -103,11 +124,26 @@ export class Service {
     // Add any additional payload fields
     options.payload.forEach(field => data[field] = user[field]);
 
+    const verificationOptions = {
+      algorithm: options.algorithm,
+      expiresIn: options.expiresIn,
+      issuer: options.issuer
+    };
+
     // Our before hook determined that we had a valid token or that this
     // was internally called so let's generate a new token with the user
     // id and return both the ID and the token.
-    return new Promise(function(resolve){
-      jwt.sign(data, options.secret, options, token => {
+    return new Promise(function(resolve, reject){
+      debug(options);
+
+      options.header = {};
+
+      jwt.sign(data, options.secret, verificationOptions, (error, token) => {
+        if (error) {
+          debug('Error within create callback', error);
+          return reject(error);
+        }
+
         return resolve( Object.assign(data, { token }) );
       });
     });
@@ -124,7 +160,7 @@ export class Service {
 export default function(options){
   options = Object.assign({}, defaults, options);
 
-  debug('configuring token authentication service with options', options);
+  // debug('configuring token authentication service with options');
 
   return function() {
     const app = this;
@@ -137,6 +173,7 @@ export default function(options){
 
     // Set up our before hooks
     tokenService.before({
+      /* all: [debug('Called from within Token Service hook')], */
       create: [_verifyToken(options)],
       find: [_verifyToken(options)],
       get: [_verifyToken(options)]

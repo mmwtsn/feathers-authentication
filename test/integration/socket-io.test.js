@@ -18,7 +18,7 @@ describe('Socket.io authentication', function() {
   };
   let jwtOptions = {
     issuer: 'feathers',
-    algorithms: ['HS256'],
+    algorithm: 'HS256',
     expiresIn: '1h' // 1 hour
   };
 

@@ -36,12 +36,17 @@ export default function(options = {}){
     }
 
     return new Promise(function(resolve, reject){
-      jwt.verify(token, secret, options, function (error, payload) {
+      const verificationOptions = {
+        algorithms: options.algorithm,
+        issuer: options.issuer
+      };
+
+      jwt.verify(token, secret, verificationOptions, function (error, payload) {
         if (error) {
           // Return a 401 if the token has expired or is invalid.
           return reject(new errors.NotAuthenticated(error));
         }
-        
+
         // Attach our decoded token payload to the params
         hook.params.payload = payload;
 

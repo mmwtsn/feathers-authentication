@@ -53,10 +53,6 @@ var User = {
   password: 'admin'
 };
 
-userService.create(User, {}).then(function(user) {
-  console.log('Created default user', user);
-});
+userService.create(User, {}).then(function(user) {});
 
 app.listen(3030);
-
-console.log('Feathers authentication app started on 127.0.0.1:3030');
